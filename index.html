@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Advanced Protein Viewer</title>
+  <script src="https://unpkg.com/ngl@latest/dist/ngl.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- 데스크톱용 네비게이션 트리거 바 -->
+  <div id="trigger-bar"></div>
+  <div id="viewport">
+    <!-- 하이라이트 설명 오버레이 -->
+    <div id="highlightOverlay">
+      <button id="closeHighlightOverlay">&times;</button>
+      <div id="highlightOverlayContent"></div>
+    </div>
+    <div class="nav-bar">
+      <div class="nav-title" id="af-viewer-title">AF Viewer</div>
+      <button class="btn" onclick="loadPDB()">
+        <i class="fas fa-eye"></i><span>시각화하기</span>
+      </button>
+      <button class="btn" onclick="toggleStickStructure()" id="toggleStickBtn">
+        <i class="fas fa-atom"></i><span>중합체 보기</span>
+      </button>
+      <button class="btn" onclick="toggleMainStructure()" id="toggleMainBtn">
+        <i class="fas fa-layer-group"></i><span>단백질 구조 숨기기</span>
+      </button>
+      <button class="btn" onclick="clearHighlights()">
+        <i class="fas fa-eraser"></i><span>하이라이트 지우기</span>
+      </button>
+      <a href="https://www.공생.com/submachine/bs-help" target="_blank" rel="noopener" class="btn" style="text-decoration: none;">
+        <i class="fas fa-question-circle"></i><span>도움말</span>
+      </a>
+      <label id="uploadLabel" for="fileInput" class="btn" style="margin: 0; cursor: pointer;">
+        <i class="fas fa-file-upload"></i><span>파일 업로드</span>
+      </label>
+    </div>
+    <button class="fullscreen-toggle" onclick="toggleFullscreen()">
+      <i class="fas fa-expand"></i>
+    </button>
+  </div>
+
+  <div id="sidepanel">
+    <h2>알파폴드 뷰어</h2>
+    <p class="subtitle">AlphaFold Protein Structure Viewer</p>
+
+    <div class="search-container">
+      <input type="text" id="searchInput" class="search-input" placeholder="단백질 이름, 생물체 이름, 또는 UniProt ID를 입력하세요" />
+      <button class="btn btn-primary" onclick="searchPDB()">
+        <i class="fas fa-search"></i> 검색하기
+      </button>
+      <div id="searchResults" class="search-results"></div>
+    </div>
+
+    <textarea id="pdbInput" placeholder="여기에 PDB 또는 CIF 포맷 텍스트를 붙여넣으세요."></textarea>
+    <input type="file" id="fileInput" accept=".pdb,.cif" onchange="handleFileUpload()" style="display: none;" />
+    <div id="residueDetails">📌 구조를 클릭하면 정보가 여기에 표시됩니다.</div>
+  </div>
+
+  <button id="hamburgerMenu" title="옵션 열기">
+    <i class="fas fa-sliders-h"></i>
+  </button>
+  
+  <div id="optionMenu">
+    <h3>시각화 옵션</h3>
+    
+    <!-- 기본 시각화 옵션 -->
+    <div class="option-section">
+      <div class="option-section-title">스타일</div>
+      <div class="option-group">
+        <label class="option-label">
+          <input type="radio" name="menuStyleOption" value="cartoon" checked>
+          <span>Cartoon</span>
+        </label>
+        <label class="option-label">
+          <input type="radio" name="menuStyleOption" value="spacefill">
+          <span>Spheres</span>
+        </label>
+        <label class="option-label">
+          <input type="radio" name="menuStyleOption" value="surface">
+          <span>Surface</span>
+        </label>
+      </div>
+    </div>
+    
+    <div class="option-section">
+      <div class="option-section-title">색상</div>
+      <div class="option-group">
+        <label class="option-label">
+          <input type="radio" name="menuColorOption" value="residueindex" checked>
+          <span>Rainbow</span>
+        </label>
+        <label class="option-label">
+          <input type="radio" name="menuColorOption" value="chainid">
+          <span>Chain</span>
+        </label>
+        <label class="option-label">
+          <input type="radio" name="menuColorOption" value="structure">
+          <span>Structure</span>
+        </label>
+      </div>
+    </div>
+    
+    <div class="option-section">
+      <div class="option-section-title">회전</div>
+      <div class="option-group">
+        <label class="option-label">
+          <input type="radio" name="menuSpinOption" value="on" checked>
+          <span>켜기</span>
+        </label>
+        <label class="option-label">
+          <input type="radio" name="menuSpinOption" value="off">
+          <span>끄기</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- 카메라 컨트롤 -->
+    <div class="option-section">
+      <div class="option-section-title">카메라 컨트롤</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <button class="menu-btn" onclick="stage.viewerControls.reset()">
+          <i class="fas fa-sync-alt"></i> 리셋
+        </button>
+        <button class="menu-btn" onclick="stage.viewerControls.zoom(0.5)">
+          <i class="fas fa-search-plus"></i> 확대
+        </button>
+        <button class="menu-btn" onclick="stage.viewerControls.zoom(-0.5)">
+          <i class="fas fa-search-minus"></i> 축소
+        </button>
+        <button class="menu-btn" onclick="stage.viewerControls.rotate(0, Math.PI/2)">
+          <i class="fas fa-redo"></i> 회전
+        </button>
+      </div>
+    </div>
+
+    <!-- 뷰 프리셋 -->
+    <div class="option-section">
+      <div class="option-section-title">뷰 프리셋</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <button class="menu-btn" onclick="stage.viewerControls.orient([1,0,0], [0,1,0])">
+          <i class="fas fa-cube"></i> 정면
+        </button>
+        <button class="menu-btn" onclick="stage.viewerControls.orient([0,1,0], [0,0,1])">
+          <i class="fas fa-cube"></i> 측면
+        </button>
+        <button class="menu-btn" onclick="stage.viewerControls.orient([0,0,1], [1,0,0])">
+          <i class="fas fa-cube"></i> 상단
+        </button>
+        <button class="menu-btn" onclick="stage.viewerControls.orient([1,1,1], [0,0,1])">
+          <i class="fas fa-cube"></i> 대각선
+        </button>
+      </div>
+    </div>
+
+    <!-- 추가 옵션 -->
+    <div class="option-section">
+      <div class="option-section-title">추가 옵션</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <button class="menu-btn" onclick="toggleBackground()">
+          <i class="fas fa-adjust"></i> 배경
+        </button>
+        <button id="labelToggle" class="toggle-btn" onclick="toggleLabels()">
+          <i class="fas fa-tag"></i> 라벨
+        </button>
+        <button id="axesToggle" class="toggle-btn" onclick="toggleAxes()">
+          <i class="fas fa-arrows-alt"></i> 축
+        </button>
+        <button id="boxToggle" class="toggle-btn" onclick="toggleBox()">
+          <i class="fas fa-vector-square"></i> 박스
+        </button>
+      </div>
+    </div>
+
+    <!-- 2차 구조 하이라이트 -->
+    <div class="option-section">
+      <div class="option-section-title">2차 구조 하이라이트</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <button id="helixToggle" class="toggle-btn" onclick="toggleHelixHighlight()">
+          <i class="fas fa-dna"></i> 나선
+        </button>
+        <button id="sheetToggle" class="toggle-btn" onclick="toggleSheetHighlight()">
+          <i class="fas fa-layer-group"></i> 시트
+        </button>
+        <button id="loopToggle" class="toggle-btn" onclick="toggleLoopHighlight()">
+          <i class="fas fa-random"></i> 루프
+        </button>
+        <button class="menu-btn" onclick="clearSecondaryStructure()">
+          <i class="fas fa-eraser"></i> 초기화
+        </button>
+      </div>
+    </div>
+
+    <!-- 표면 표현 -->
+    <div class="option-section">
+      <div class="option-section-title">표면 표현</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <button id="surfaceToggle" class="toggle-btn" onclick="toggleSurface()">
+          <i class="fas fa-circle"></i> 표면
+        </button>
+        <button id="sasToggle" class="toggle-btn" onclick="toggleSAS()">
+          <i class="fas fa-atom"></i> SAS
+        </button>
+        <button id="sasPlusToggle" class="toggle-btn" onclick="toggleSASPlus()">
+          <i class="fas fa-atom"></i> SAS+
+        </button>
+        <button class="menu-btn" onclick="clearSurface()">
+          <i class="fas fa-eraser"></i> 초기화
+        </button>
+      </div>
+    </div>
+
+    <!-- 측정 도구 -->
+    <div class="option-section">
+      <div class="option-section-title">측정 도구</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <button id="distanceToggle" class="toggle-btn" onclick="toggleDistanceMeasure()">
+          <i class="fas fa-ruler"></i> 거리
+        </button>
+        <button id="angleToggle" class="toggle-btn" onclick="toggleAngleMeasure()">
+          <i class="fas fa-drafting-compass"></i> 각도
+        </button>
+        <button id="dihedralToggle" class="toggle-btn" onclick="toggleDihedralMeasure()">
+          <i class="fas fa-compass"></i> 이면각
+        </button>
+        <button class="menu-btn" onclick="clearMeasurements()">
+          <i class="fas fa-eraser"></i> 초기화
+        </button>
+      </div>
+    </div>
+
+    <button id="closeOptionMenu">닫기</button>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html> 
