@@ -38,7 +38,7 @@
         <i class="fas fa-file-upload"></i><span>파일 업로드</span>
       </label>
     </div>
-    <button class="fullscreen-toggle" onclick="toggleFullscreen()">
+    <button class="fullscreen-toggle" onclick="toggleFullscreen()" title="전체화면 토글">
       <i class="fas fa-expand"></i>
     </button>
   </div>
@@ -236,5 +236,18 @@
   </div>
 
   <script src="script.js"></script>
+  
+  <!-- 라이센스 정보 -->
+  <div id="licenseInfo" style="display: none; position: fixed; bottom: 10px; right: 10px; background: rgba(0,0,0,0.8); color: white; padding: 10px; border-radius: 5px; font-size: 12px; z-index: 1000;">
+    <div><strong>라이센스 정보</strong></div>
+    <div>이 프로젝트는 MIT 라이센스 하에 배포됩니다.</div>
+    <div>NGL Viewer: MIT 라이센스</div>
+    <div>Font Awesome: MIT 라이센스</div>
+    <button onclick="document.getElementById('licenseInfo').style.display='none'" style="margin-top: 5px; padding: 2px 8px; background: #666; border: none; color: white; border-radius: 3px; cursor: pointer;">닫기</button>
+  </div>
+  
+  <button onclick="document.getElementById('licenseInfo').style.display='block'" style="position: fixed; bottom: 10px; right: 10px; background: rgba(0,0,0,0.6); color: white; border: none; padding: 5px 10px; border-radius: 3px; font-size: 12px; cursor: pointer; z-index: 999;">
+    <i class="fas fa-info-circle"></i> 라이센스
+  </button>
 </body>
 </html> 
